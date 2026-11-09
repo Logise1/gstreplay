@@ -78,6 +78,7 @@ class ModvilTrackerElement extends LitElement {
     this._closestArrival = 0;
 
     this._focusOnSanta = true;
+    this._userZoom = null;
     this._focusTimeout = 0;
     this._duringMapChange = false;
     this._duringResize = false;
@@ -108,13 +109,45 @@ class ModvilTrackerElement extends LitElement {
     common.preload.wait(this._preparePromise);
 
     const updateNow = () => {
-      const jitter = routeJitterRatio * this.routeJitter * 1000;  // adjust to ms
-      this.now = +new Date() + this.trackerOffset + jitter;
+      this.now = this._clockNow();
     };
     updateNow();
     window.setInterval(updateNow, 1000);
+    this._tickSanta = this._tickSanta.bind(this);
+    this._raf = 0;
 
     this._onWindowResize = this._onWindowResize.bind(this);
+  }
+
+  _clockNow() {
+    const jitter = routeJitterRatio * this.routeJitter * 1000;  // adjust to ms
+    return +new Date() + this.trackerOffset + jitter;
+  }
+
+  _tickSanta() {
+    this._raf = window.requestAnimationFrame(this._tickSanta);
+    if (!this._ready || !this._dataManager || !this._santaOverlay) {
+      return;
+    }
+    this._dataManager.now = this._clockNow();
+    const details = this._dataManager.details;
+    if (!details) {
+      return;
+    }
+    this._santaOverlay.position = new google.maps.LatLng(details.location.lat, details.location.lng);
+    this._santaNode.heading = details.heading;
+    this._santaNode.stop = details.stop;
+    this._santaNode.hidden = details.home;
+    if (this._stopManager) {
+      this._stopManager.update();
+    }
+    if (this._focusOnSanta) {
+      let offset = details.stop ? 1 : 0;
+      if (details.home) {
+        offset = -10;
+      }
+      this._setLocation(this._santaOverlay.position, offset);
+    }
   }
 
   _onWindowResize() {
@@ -130,11 +163,18 @@ class ModvilTrackerElement extends LitElement {
     super.connectedCallback();
     window.addEventListener('resize', this._onWindowResize);
     this._width = window.innerWidth;
+    if (!this._raf) {
+      this._raf = window.requestAnimationFrame(this._tickSanta);
+    }
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     window.removeEventListener('resize', this._onWindowResize);
+    if (this._raf) {
+      window.cancelAnimationFrame(this._raf);
+      this._raf = 0;
+    }
   }
 
   focusOnSanta() {
@@ -240,6 +280,9 @@ class ModvilTrackerElement extends LitElement {
       const min = (Math.min(1024, window.innerWidth) + usableMap) / 2;
       let zoom = Math.round(min / 160) + offset;
       zoom = Math.max(2, Math.min(6, zoom));
+      if (this._userZoom != null) {
+        zoom = this._userZoom;
+      }
 
       const shift = this.offsetHeight - usableMap;
       const bounds = new google.maps.LatLngBounds(location, location);
@@ -335,8 +378,12 @@ class ModvilTrackerElement extends LitElement {
         gtag('event', 'tracker', {action: 'unfocusSanta', label: 'map', reason});
       }
     };
-    this._map.addListener('center_changed', () => reset('move'));
-    this._map.addListener('zoom_changed', () => reset('zoom'));
+    this._map.addListener('dragstart', () => reset('move'));
+    this._map.addListener('zoom_changed', () => {
+      if (!this._duringMapChange && !this._duringResize && this._map.getZoom) {
+        this._userZoom = this._map.getZoom();
+      }
+    });
 
     this._dataManager = new DataManager([]);
     this._stopManager = new StopManager(null, this._dataManager);

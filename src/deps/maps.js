@@ -226,6 +226,11 @@ function installGoogleMapsShim(L) {
           this._emit('center_changed');
         }
       });
+      this._map.on('dragstart', () => {
+        if (!this._suppressEvents) {
+          this._emit('dragstart');
+        }
+      });
       this._map.on('zoomend', () => {
         if (!this._suppressEvents) {
           this._emit('zoom_changed');
@@ -271,6 +276,10 @@ function installGoogleMapsShim(L) {
       this._map.zoomOut(1);
     }
 
+    getZoom() {
+      return this._map.getZoom();
+    }
+
     fitBounds(bounds) {
       const b = bounds && bounds._bounds;
       if (b) {
@@ -294,12 +303,16 @@ function installGoogleMapsShim(L) {
       const sameZoom = Math.abs(this._map.getZoom() - zoom) < 0.05;
       const pixelShift = this._map.latLngToContainerPoint(cur)
           .distanceTo(this._map.latLngToContainerPoint(target));
-      if (sameZoom && pixelShift < 1.5) {
+      if (sameZoom && pixelShift < 0.05) {
         return;
       }
 
       this._suppressEvents = true;
-      this._map.setView(target, zoom, {animate: false, reset: false});
+      if (sameZoom) {
+        this._map.panTo(target, {animate: false, noMoveStart: true});
+      } else {
+        this._map.setView(target, zoom, {animate: false, reset: false});
+      }
       this._overlays.forEach((overlay) => overlay.draw && overlay.draw());
       this._suppressEvents = false;
     }
