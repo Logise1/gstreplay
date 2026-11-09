@@ -3,11 +3,11 @@
  * original Santa Tracker overlay, markers, and polylines keep working.
  *
  * GitHub Pages cannot use the original Santa Tracker Maps key
- * (ReferrerNotAllowedMapError), so this uses Leaflet + OSM tiles tinted
- * toward the original GST palette.
+ * (ReferrerNotAllowedMapError), so this uses Leaflet + OSM tiles forced
+ * into GST's two-color look: cream land and teal water.
  */
 
-const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const GST_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -84,8 +84,8 @@ const TRACKER_LAYOUT_CSS = `
 .leaflet-control-attribution {
   margin: 0 8px 8px 0 !important;
 }
-.leaflet-layer img.gst-tiles {
-  filter: hue-rotate(-18deg) saturate(1.18) brightness(1.04) contrast(0.96);
+.leaflet-tile-pane {
+  filter: grayscale(1) contrast(1.85) brightness(1.22) sepia(1) hue-rotate(150deg) saturate(2.4) brightness(1.06);
 }
 `;
 
@@ -117,7 +117,7 @@ function toLeafletLatLng(pos) {
 }
 
 function addBasemap(L, map) {
-  L.tileLayer(OSM_TILES, {
+  L.tileLayer(GST_TILES, {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19,
     detectRetina: false,
