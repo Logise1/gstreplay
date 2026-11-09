@@ -10,7 +10,6 @@ modvil-tracker {
   width: 100%;
   min-height: 100vh;
   height: 100%;
-  z-index: 0;
 }
 
 modvil-tracker .map,
@@ -30,22 +29,4 @@ modvil-tracker .map,
   top: 16px;
   left: 16px;
   z-index: 2000;
-}
-
-#wau-counter {
-  position: fixed;
-  left: 10px;
-  bottom: 10px;
-  z-index: 2147483646;
-  width: 81px;
-  height: 29px;
-  transform: scale(0.75);
-  transform-origin: bottom left;
-  pointer-events: auto;
-}
-
-#wau-counter > div {
-  display: inline-block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
 }
