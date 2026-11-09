@@ -79,6 +79,9 @@ class ModvilTrackerElement extends LitElement {
 
     this._focusOnSanta = true;
     this._userZoom = null;
+    this._zoomBeforeStop = null;
+    this._stopZoomed = false;
+    this._appliedFollowZoom = null;
     this._focusTimeout = 0;
     this._duringMapChange = false;
     this._duringResize = false;
@@ -142,7 +145,8 @@ class ModvilTrackerElement extends LitElement {
       this._stopManager.update();
     }
     if (this._focusOnSanta) {
-      let offset = details.stop ? 1 : 0;
+      this._syncStopZoom(details);
+      let offset = 0;
       if (details.home) {
         offset = -10;
       }
@@ -249,13 +253,26 @@ class ModvilTrackerElement extends LitElement {
     }
 
     if (this._focusOnSanta) {
-      let offset = details.stop ? 1 : 0;
+      this._syncStopZoom(details);
+      let offset = 0;
       if (details.home) {
         offset = -10;  // zoom as far out as possible here
       }
       this._setLocation(this._santaOverlay.position, offset);
     }
     return true;
+  }
+
+  _syncStopZoom(details) {
+    const stopped = !!(details && details.stop && !details.home);
+    if (stopped === this._stopZoomed) {
+      return;
+    }
+    if (stopped) {
+      const current = this._map && this._map.getZoom ? this._map.getZoom() : null;
+      this._zoomBeforeStop = this._userZoom != null ? this._userZoom : current;
+    }
+    this._stopZoomed = stopped;
   }
 
   /**
@@ -280,7 +297,12 @@ class ModvilTrackerElement extends LitElement {
       const min = (Math.min(1024, window.innerWidth) + usableMap) / 2;
       let zoom = Math.round(min / 160) + offset;
       zoom = Math.max(2, Math.min(6, zoom));
-      if (this._userZoom != null) {
+      if (this._stopZoomed && this._zoomBeforeStop != null) {
+        zoom = this._zoomBeforeStop + 1;
+      } else if (this._zoomBeforeStop != null) {
+        zoom = this._zoomBeforeStop;
+        this._zoomBeforeStop = null;
+      } else if (this._userZoom != null) {
         zoom = this._userZoom;
       }
 
@@ -289,11 +311,17 @@ class ModvilTrackerElement extends LitElement {
 
       // nb. This order is pretty specific, otherwise we lose the center.
       this._map.fitBounds(bounds);
-      this._map.setZoom(zoom);
+      if (this._appliedFollowZoom !== zoom) {
+        this._map.setZoom(zoom);
+        this._appliedFollowZoom = zoom;
+      }
       this._map.panBy(0, shift / 2);
 
     } finally {
-      this._duringMapChange = false;
+      window.clearTimeout(this._mapChangeTimeout);
+      this._mapChangeTimeout = window.setTimeout(() => {
+        this._duringMapChange = false;
+      }, 700);
     }
   }
 

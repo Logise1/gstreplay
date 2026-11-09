@@ -310,11 +310,15 @@ function installGoogleMapsShim(L) {
       this._suppressEvents = true;
       if (sameZoom) {
         this._map.panTo(target, {animate: false, noMoveStart: true});
+        this._overlays.forEach((overlay) => overlay.draw && overlay.draw());
+        this._suppressEvents = false;
       } else {
-        this._map.setView(target, zoom, {animate: false, reset: false});
+        this._map.setView(target, zoom, {animate: true, duration: 0.55});
+        this._map.once('zoomend', () => {
+          this._overlays.forEach((overlay) => overlay.draw && overlay.draw());
+          this._suppressEvents = false;
+        });
       }
-      this._overlays.forEach((overlay) => overlay.draw && overlay.draw());
-      this._suppressEvents = false;
     }
   }
 
