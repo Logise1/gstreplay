@@ -91,7 +91,38 @@ class ModvilTrackerStatsElement extends LitElement {
     return {
       details: {type: Object},
       arrivalTime: {type: Number},
+      _showCredit: {type: Boolean},
     };
+  }
+
+  constructor() {
+    super();
+    this._showCredit = false;
+    this._creditShowTimer = 0;
+    this._creditHideTimer = 0;
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    this._armCredit();
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.clearTimeout(this._creditShowTimer);
+    window.clearTimeout(this._creditHideTimer);
+  }
+
+  _armCredit() {
+    window.clearTimeout(this._creditShowTimer);
+    window.clearTimeout(this._creditHideTimer);
+    this._creditShowTimer = window.setTimeout(() => {
+      this._showCredit = true;
+      this._creditHideTimer = window.setTimeout(() => {
+        this._showCredit = false;
+        this._armCredit();
+      }, 15000);
+    }, 120000);
   }
 
   render() {
@@ -135,6 +166,7 @@ class ModvilTrackerStatsElement extends LitElement {
       <h2>${formatDuration(d.next)}</h2>
     </div>
   </div>
+  <div class="credit ${this._showCredit ? 'show' : ''}">Made by @LogiseTracksSanta</div>
 </div>
     `;
   }
