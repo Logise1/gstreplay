@@ -3,8 +3,11 @@
  * original Santa Tracker overlay, markers, and polylines keep working.
  *
  * GitHub Pages cannot use the original Santa Tracker Maps key
- * (ReferrerNotAllowedMapError), so this uses Leaflet + CARTO tiles instead.
+ * (ReferrerNotAllowedMapError), so this uses Leaflet + OSM tiles tinted
+ * toward the original GST palette.
  */
+
+const OSM_TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -72,6 +75,18 @@ const TRACKER_LAYOUT_CSS = `
   outline: 1px solid transparent;
   border: none !important;
 }
+.leaflet-bottom.leaflet-right {
+  bottom: 0;
+  right: 0;
+  top: auto;
+  z-index: 1100;
+}
+.leaflet-control-attribution {
+  margin: 0 8px 8px 0 !important;
+}
+.leaflet-layer img.gst-tiles {
+  filter: hue-rotate(-18deg) saturate(1.18) brightness(1.04) contrast(0.96);
+}
 `;
 
 let leafletStyleSheet = null;
@@ -99,6 +114,15 @@ function toLatLngLiteral(pos) {
 function toLeafletLatLng(pos) {
   const lit = toLatLngLiteral(pos);
   return lit ? window.L.latLng(lit.lat, lit.lng) : null;
+}
+
+function addBasemap(L, map) {
+  L.tileLayer(OSM_TILES, {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+    detectRetina: false,
+    className: 'gst-tiles',
+  }).addTo(map);
 }
 
 function installGoogleMapsShim(L) {
@@ -167,28 +191,23 @@ function installGoogleMapsShim(L) {
         center: toLeafletLatLng(opts.center) || [84.6, 168],
         zoom: opts.zoom == null ? 2 : opts.zoom,
         minZoom: opts.minZoom == null ? 2 : opts.minZoom,
-        maxZoom: 12,
+        maxZoom: 18,
         zoomControl: false,
         attributionControl: true,
         scrollWheelZoom: true,
+        wheelPxPerZoomLevel: 80,
+        touchZoom: true,
+        doubleClickZoom: true,
+        dragging: true,
         worldCopyJump: true,
-        zoomAnimation: false,
+        zoomAnimation: true,
         fadeAnimation: false,
         markerZoomAnimation: false,
-        zoomSnap: 1,
+        zoomSnap: 0,
         zoomDelta: 1,
       });
 
-      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 19,
-        detectRetina: false,
-      }).addTo(this._map);
-
-      this._zoomControl = L.control.zoom({position: 'bottomright'});
-      if (opts.zoomControl !== false) {
-        this._zoomControl.addTo(this._map);
-      }
+      addBasemap(L, this._map);
 
       if (!this._map.getPane('floatPane')) {
         this._map.createPane('floatPane');
@@ -207,7 +226,7 @@ function installGoogleMapsShim(L) {
           this._emit('center_changed');
         }
       });
-      this._map.on('zoom', () => {
+      this._map.on('zoomend', () => {
         if (!this._suppressEvents) {
           this._emit('zoom_changed');
         }
@@ -236,22 +255,20 @@ function installGoogleMapsShim(L) {
     }
 
     setOptions(opts = {}) {
-      if (opts.gestureHandling === 'none') {
-        this._map.dragging.disable();
-        this._map.scrollWheelZoom.disable();
-        this._map.touchZoom.disable();
-        this._map.doubleClickZoom.disable();
-      } else if (opts.gestureHandling === 'auto') {
-        this._map.dragging.enable();
-        this._map.scrollWheelZoom.enable();
-        this._map.touchZoom.enable();
-        this._map.doubleClickZoom.enable();
-      }
-      if (opts.zoomControl === false) {
-        this._map.removeControl(this._zoomControl);
-      } else if (opts.zoomControl === true) {
-        this._zoomControl.addTo(this._map);
-      }
+      // Original GST disables map gestures on small screens so the village page
+      // can scroll. This replay is a fullscreen map, so zoom must stay on.
+      this._map.dragging.enable();
+      this._map.scrollWheelZoom.enable();
+      this._map.touchZoom.enable();
+      this._map.doubleClickZoom.enable();
+    }
+
+    zoomIn() {
+      this._map.zoomIn(1);
+    }
+
+    zoomOut() {
+      this._map.zoomOut(1);
     }
 
     fitBounds(bounds) {
@@ -274,7 +291,7 @@ function installGoogleMapsShim(L) {
       const point = this._map.project(center, zoom);
       const target = this._map.unproject(point.add([x, y]), zoom);
       const cur = this._map.getCenter();
-      const sameZoom = this._map.getZoom() === zoom;
+      const sameZoom = Math.abs(this._map.getZoom() - zoom) < 0.05;
       const pixelShift = this._map.latLngToContainerPoint(cur)
           .distanceTo(this._map.latLngToContainerPoint(target));
       if (sameZoom && pixelShift < 1.5) {

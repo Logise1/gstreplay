@@ -23,3 +23,10 @@ modvil-tracker .map,
   background: rgba(255, 255, 255, 0.7);
   font-size: 10px;
 }
+
+#music-toggle {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 2000;
+}
