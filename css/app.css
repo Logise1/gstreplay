@@ -11,3 +11,15 @@ modvil-tracker {
   min-height: 100vh;
   height: 100%;
 }
+
+modvil-tracker .map,
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #8ee0dd;
+}
+
+.leaflet-container .leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
+}
