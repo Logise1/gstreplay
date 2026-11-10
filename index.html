@@ -22,7 +22,36 @@
 <body>
   <santa-button id="music-toggle" aria-label="Mute"></santa-button>
   <modvil-tracker></modvil-tracker>
+
+  <div id="chat-dock">
+    <div id="chat-consent" hidden>
+      <h2>Enable Chat?</h2>
+      <p>
+        This opens an external LiveChat room. Messages and logins are handled by
+        a third-party site, so you may be exposed to outside people and content.
+      </p>
+      <label class="chat-keep">
+        <input id="chat-keep" type="checkbox" />
+        Keep my decision
+      </label>
+      <div class="chat-actions">
+        <button id="chat-no" type="button">No</button>
+        <button id="chat-yes" type="button">Yes</button>
+      </div>
+    </div>
+    <div id="chat-frame-wrap" hidden>
+      <iframe
+        id="chat-frame"
+        title="LiveChat"
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+        allow="clipboard-write"
+        src="about:blank"></iframe>
+    </div>
+  </div>
+
   <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/chat-gate.js"></script>
   <script
     src="https://livepill.lonormal.com/livepill.js"
     data-site="gstreplay"
