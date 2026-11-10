@@ -2,12 +2,14 @@ const CHAT_URL = 'https://livepill.lonormal.com/chat/widget?room=5d899562308b';
 const STORE_KEY = 'gstreplay-chat-decision';
 const SESSION_KEY = 'gstreplay-chat-session';
 
+const dock = document.getElementById('chat-dock');
 const consent = document.getElementById('chat-consent');
 const frameWrap = document.getElementById('chat-frame-wrap');
 const frame = document.getElementById('chat-frame');
 const keepBox = document.getElementById('chat-keep');
 const yesBtn = document.getElementById('chat-yes');
 const noBtn = document.getElementById('chat-no');
+const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
 
 function readDecision() {
   try {
@@ -88,6 +90,27 @@ if (noBtn) {
   noBtn.addEventListener('click', () => {
     saveDecision('no', !!(keepBox && keepBox.checked));
     hideAll();
+  });
+}
+
+if (dock && frameWrap) {
+  dock.addEventListener('mouseenter', () => {
+    if (!frameWrap.hidden) {
+      dock.classList.add('is-open');
+    }
+  });
+  dock.addEventListener('mouseleave', () => {
+    if (finePointer.matches) {
+      dock.classList.remove('is-open');
+    }
+  });
+  frameWrap.addEventListener('click', () => {
+    if (frameWrap.hidden) {
+      return;
+    }
+    if (!finePointer.matches) {
+      dock.classList.toggle('is-open');
+    }
   });
 }
 
